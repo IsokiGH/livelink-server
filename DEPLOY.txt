@@ -1,0 +1,58 @@
+=====================================================
+  HOST THE LIVELINK SERVER ON RENDER (free, no card)
+=====================================================
+
+FILES IN THIS FOLDER (upload all of them):
+  server.py  genkey.py  requirements.txt  overlay.html  render.yaml
+
+------------------------------------------------------------------
+STEP 1 - Put the files on GitHub (no command line needed)
+  1. Make a free account at github.com
+  2. Click + (top right) -> New repository
+        Name: livelink-server     Visibility: Public     -> Create
+  3. On the repo page: "Add file" -> "Upload files"
+  4. Drag in ALL the files from this folder, then "Commit changes"
+
+STEP 2 - Make a Render account
+  1. Go to render.com -> Get Started -> sign up with GitHub (free, no card)
+
+STEP 3 - Create the web service
+  1. Render dashboard -> New + -> Web Service
+  2. "Build and deploy from a Git repository" -> Next
+  3. Connect GitHub, pick  livelink-server
+  4. Settings:
+        Name:           livelink-server (or anything)
+        Region:         closest to you
+        Branch:         main
+        Runtime:        Python  (auto-detected)
+        Build command:  pip install -r requirements.txt
+        Start command:  python server.py
+        Instance type:  Free
+  5. Click "Advanced" -> Add Environment Variable:
+        Key:   LICENSE_KEYS
+        Value: your keys, comma-separated (run genkey.py to make them)
+     (Optional) add  HWID_LOCK = 1  to lock each key to one PC.
+  6. Click "Create Web Service" and wait ~2-3 min for "Live".
+
+STEP 4 - Get your URL and test
+  Render shows a URL like  https://livelink-server-xxxx.onrender.com
+  - Open it -> should say "LiveLink server is running."
+  - Open  <that url>/overlay?key=ONE-OF-YOUR-KEYS  -> overlay loads.
+
+STEP 5 - Point the app at it
+  Open livelink.py, set:
+     SERVER_URL = "https://livelink-server-xxxx.onrender.com"
+  Then rebuild the app (make_installer.bat). Give buyers a license key.
+
+ADD MORE KEYS LATER
+  Render -> your service -> Environment -> edit LICENSE_KEYS ->
+  add ",LL-NEW-KEY-HERE" -> Save (service restarts, key works).
+  Make keys with:  python genkey.py 5
+
+NOTES (honest)
+  - Free service sleeps after 15 min idle; first request wakes it (~30-60s).
+    To keep it awake, use a free pinger (uptimerobot.com / cron-job.org)
+    hitting  <your url>/  every 10 minutes.
+  - Keys in LICENSE_KEYS persist across restarts (env vars are saved).
+  - HWID lock is in-memory, so it resets when the free service sleeps/restarts.
+    For permanent HWID locking you'd add a real database later.
