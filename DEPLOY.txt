@@ -1,58 +1,261 @@
-=====================================================
-  HOST THE LIVELINK SERVER ON RENDER (free, no card)
-=====================================================
+===================================================================
+  LIVELINK SERVER - FULL SETUP GUIDE
+  Host it free 24/7 on Render. No command line needed.
+  Made by Isoki (@isoki_tt)
+===================================================================
 
-FILES IN THIS FOLDER (upload all of them):
-  server.py  genkey.py  requirements.txt  overlay.html  render.yaml
+WHAT YOU'RE SETTING UP
+  A small server that:
+    - validates license keys (so the app can't be used without one)
+    - locks each key to ONE device (HWID lock - stops key sharing)
+    - gives you an admin web page to generate & manage keys
+    - runs the auctions + overlay + Roblox relay
+  You do this ONCE. After that you just generate keys for buyers.
 
-------------------------------------------------------------------
-STEP 1 - Put the files on GitHub (no command line needed)
-  1. Make a free account at github.com
-  2. Click + (top right) -> New repository
-        Name: livelink-server     Visibility: Public     -> Create
-  3. On the repo page: "Add file" -> "Upload files"
-  4. Drag in ALL the files from this folder, then "Commit changes"
+FILES IN THIS FOLDER (you'll upload all of them):
+    server.py   genkey.py   requirements.txt   overlay.html   render.yaml
 
-STEP 2 - Make a Render account
-  1. Go to render.com -> Get Started -> sign up with GitHub (free, no card)
+Time needed: about 15-20 minutes. Everything here is free.
 
-STEP 3 - Create the web service
-  1. Render dashboard -> New + -> Web Service
-  2. "Build and deploy from a Git repository" -> Next
-  3. Connect GitHub, pick  livelink-server
-  4. Settings:
-        Name:           livelink-server (or anything)
-        Region:         closest to you
-        Branch:         main
-        Runtime:        Python  (auto-detected)
-        Build command:  pip install -r requirements.txt
-        Start command:  python server.py
-        Instance type:  Free
-  5. Click "Advanced" -> Add Environment Variable:
-        Key:   LICENSE_KEYS
-        Value: your keys, comma-separated (run genkey.py to make them)
-     (Optional) add  HWID_LOCK = 1  to lock each key to one PC.
-  6. Click "Create Web Service" and wait ~2-3 min for "Live".
+===================================================================
+ PART 1 - PUT THE CODE ON GITHUB
+===================================================================
+GitHub stores your code so Render can read it.
 
-STEP 4 - Get your URL and test
-  Render shows a URL like  https://livelink-server-xxxx.onrender.com
-  - Open it -> should say "LiveLink server is running."
-  - Open  <that url>/overlay?key=ONE-OF-YOUR-KEYS  -> overlay loads.
+1.1  Go to  github.com  and click "Sign up". Make a free account
+     (email, password, username) and verify the email code.
 
-STEP 5 - Point the app at it
-  Open livelink.py, set:
-     SERVER_URL = "https://livelink-server-xxxx.onrender.com"
-  Then rebuild the app (make_installer.bat). Give buyers a license key.
+1.2  Top-right, click the  +  icon  ->  "New repository".
+       - Repository name:  livelink-server
+       - Visibility:       Public
+       - Do NOT check "Add a README".
+       - Click the green "Create repository".
+     You should now see a near-empty page titled livelink-server.
 
-ADD MORE KEYS LATER
-  Render -> your service -> Environment -> edit LICENSE_KEYS ->
-  add ",LL-NEW-KEY-HERE" -> Save (service restarts, key works).
-  Make keys with:  python genkey.py 5
+1.3  Click  "Add file"  ->  "Upload files".
 
-NOTES (honest)
-  - Free service sleeps after 15 min idle; first request wakes it (~30-60s).
-    To keep it awake, use a free pinger (uptimerobot.com / cron-job.org)
-    hitting  <your url>/  every 10 minutes.
-  - Keys in LICENSE_KEYS persist across restarts (env vars are saved).
-  - HWID lock is in-memory, so it resets when the free service sleeps/restarts.
-    For permanent HWID locking you'd add a real database later.
+1.4  Open this "server" folder, select ALL the files
+     (server.py, genkey.py, requirements.txt, overlay.html, render.yaml)
+     and DRAG them onto the GitHub page.
+       IMPORTANT: drag the FILES, not the folder. After dragging you
+       should see all 5 filenames listed on the page.
+
+1.5  Scroll down, click the green "Commit changes".
+     CHECK: the repo page now lists all 5 files.
+
+===================================================================
+ PART 2 - MAKE A RENDER ACCOUNT
+===================================================================
+2.1  Go to  render.com  ->  "Get Started".
+2.2  Choose "Sign in with GitHub". Log in to GitHub if asked, then
+     click "Authorize Render".
+     CHECK: you land on the Render Dashboard. (No credit card needed.)
+
+===================================================================
+ PART 3 - CREATE THE WEB SERVICE
+===================================================================
+3.1  Render dashboard  ->  "New +" (top right)  ->  "Web Service".
+
+3.2  Choose "Build and deploy from a Git repository"  ->  "Next".
+
+3.3  Find  livelink-server  in the list  ->  "Connect".
+       If it's not listed: click "Configure account", grant Render
+       access to the repo on GitHub, then come back.
+
+3.4  Fill in the settings EXACTLY:
+       - Name:            livelink-server   (becomes part of your URL)
+       - Region:          the one closest to you
+       - Branch:          main
+       - Root Directory:  (leave blank)
+       - Runtime:         Python 3 (auto-detected)
+       - Build Command:   pip install -r requirements.txt
+       - Start Command:   python server.py
+
+3.5  Scroll to "Instance Type" and pick  Free.
+       (Make sure Free is selected so you're never charged.)
+
+3.6  DO NOT click create yet - first add your settings in PART 4.
+
+===================================================================
+ PART 4 - ENVIRONMENT VARIABLES (your settings/passwords)
+===================================================================
+Still on the create page, click "Advanced", then
+"Add Environment Variable" for each of these:
+
+REQUIRED:
+   Key:    ADMIN_PASSWORD
+   Value:  (choose a STRONG password - this protects your key dashboard)
+
+RECOMMENDED (you can also add these later under Environment):
+   Key:    LATEST_VERSION
+   Value:  3.0
+   Key:    DOWNLOAD_URL
+   Value:  (a link to your installer - fill in once you've uploaded it)
+
+OPTIONAL NOW (needed for permanent keys - see PART 7):
+   Key:    DATABASE_URL
+   Value:  (a Supabase Postgres URL)
+
+OPTIONAL (for future SellAuth/Stripe auto-keys - see PART 9):
+   Key:    ADMIN_TOKEN
+   Value:  (a long random string)
+
+Then click the big "Create Web Service" button.
+
+===================================================================
+ PART 5 - WATCH IT DEPLOY & TEST IT
+===================================================================
+5.1  Render opens a Logs screen and starts building (2-3 minutes).
+     You'll see Flask install, then "Running 'python server.py'", then
+     a line like "Running on http://0.0.0.0:10000".
+
+5.2  Near the top the status turns to  "Live"  (green dot).
+
+5.3  Copy your URL (top of the page):
+       https://livelink-server-xxxx.onrender.com
+
+5.4  Paste it in a browser.
+     CHECK: it shows  "LiveLink server is running."
+       (If it spins ~30-60s first, that's the free tier waking up. Wait.)
+
+===================================================================
+ PART 6 - YOUR KEY DASHBOARD (generate & manage keys)
+===================================================================
+6.1  In a browser go to:
+       https://livelink-server-xxxx.onrender.com/admin
+
+6.2  A login box appears.
+       Username:  admin
+       Password:  (the ADMIN_PASSWORD you set in PART 4)
+
+6.3  You now see the LiveLink Admin page. To make keys for buyers:
+       - Set "Generate ... keys" (e.g. 1), plan (pro), and an optional
+         note (buyer name or order id).
+       - Click "Generate keys". The new key(s) appear at the top -
+         copy them and send to your buyer.
+
+6.4  Each key row shows:
+       - Status:        active / disabled
+       - Device (HWID): which machine the key is locked to
+       - Buttons:
+           Disable      -> kills the key (refunds, chargebacks, sharing)
+           Enable       -> re-activates a disabled key
+           Reset device -> unbinds it so a buyer can move to a new PC
+
+   (You can also make keys on your own PC with:  python genkey.py 5
+    but the /admin page is the easy way and works on the live server.)
+
+===================================================================
+ PART 7 - MAKE KEYS PERMANENT (free, with Supabase)  [IMPORTANT]
+===================================================================
+By default the server stores keys in a file. On Render's FREE tier
+that file RESETS whenever the service redeploys - so your keys would
+disappear. For real selling, use a free database so keys + device
+locks last forever:
+
+7.1  Go to  supabase.com  -> sign up (free) -> "New project".
+       - Give it a name and a database password (save that password).
+       - Pick a region near you -> Create. Wait ~2 minutes.
+
+7.2  In the project: Settings (gear)  ->  Database.
+
+7.3  Find "Connection string" -> choose the "URI" tab -> Copy it.
+     It looks like:
+       postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres
+     Replace [YOUR-PASSWORD] with the database password from step 7.1.
+
+7.4  In Render -> your service -> "Environment" (left menu) ->
+     Add Environment Variable:
+       Key:    DATABASE_URL
+       Value:  (the full URI from 7.3, with the real password)
+     Click "Save changes". The service restarts.
+
+   Now all keys and device locks are stored in Supabase permanently
+   and survive every redeploy.
+
+   NOTE: if you already made keys before adding DATABASE_URL, remake
+   them in /admin now (they were in the temporary file).
+
+===================================================================
+ PART 8 - CONNECT THE APP TO YOUR SERVER
+===================================================================
+8.1  Open  livelink.py  in any editor. Near the top find:
+       SERVER_URL  = "https://your-livelink-server.onrender.com"
+
+8.2  Change it to YOUR Render URL (no slash on the end):
+       SERVER_URL  = "https://livelink-server-xxxx.onrender.com"
+
+8.3  Save, then double-click  make_installer.bat  to rebuild the app
+     ->  Output\LiveLinkSetup.exe  is what you hand to buyers.
+
+8.4  Test: open the app, paste one of your keys on the activation
+     screen -> it should unlock. On a SECOND PC the same key will be
+     refused (that's the HWID lock working).
+
+===================================================================
+ PART 9 - PUSH AN UPDATE TO USERS (easy)
+===================================================================
+9.1  Build the new installer (make_installer.bat) and upload it
+     somewhere public (a GitHub Release or Google Drive link).
+
+9.2  In Render -> your service -> Environment, set:
+       LATEST_VERSION = (the new number, e.g. 3.1)
+       DOWNLOAD_URL   = (the link to the new installer)
+     Save changes.
+
+9.3  Users who open the app and click About -> "Check for updates"
+     now see "Update available" and a Download button. Done - no code
+     change needed to announce an update.
+
+(For the future SellAuth/Stripe automation: set ADMIN_TOKEN, then your
+payment webhook can POST to  /api/keys  with header
+  X-Admin-Token: <your ADMIN_TOKEN>
+and it returns a fresh key as JSON {"key": "..."}. We'll wire this up
+when you build the store.)
+
+===================================================================
+ PART 10 - KEEP IT AWAKE (free, optional)
+===================================================================
+Free Render services sleep after 15 minutes idle (first request then
+takes ~30-60s). To keep it always-on:
+  - Make a free account at  uptimerobot.com  (or cron-job.org).
+  - Add a monitor that requests  https://YOUR-URL.onrender.com/
+    every 5-10 minutes. That stays within Render's free 750 hrs/month.
+
+===================================================================
+ TROUBLESHOOTING
+===================================================================
+- Build failed / "requirements.txt not found":
+    The files landed in a subfolder. On GitHub the repo's main page
+    must list server.py and requirements.txt directly. Re-upload the
+    files (not the folder).
+- Logs say "No open ports detected" then time out:
+    The app didn't start - scroll up for a red error line (usually a
+    typo if you edited server.py). Re-upload the original and redeploy.
+- /admin shows "Admin login required" forever:
+    ADMIN_PASSWORD isn't set, or you typed the wrong password. Check
+    Render -> Environment. Username is always  admin.
+- App says "Can't reach the server":
+    SERVER_URL in livelink.py has a typo / trailing slash, OR the
+    service is asleep - open the URL in a browser once to wake it.
+- A real buyer got a new PC and their key won't work:
+    /admin -> find their key -> "Reset device" -> they can activate
+    on the new machine.
+- Keys disappeared after a redeploy:
+    You haven't set DATABASE_URL yet (PART 7). Add Supabase.
+
+===================================================================
+ SECURITY NOTES (honest)
+===================================================================
+- License checks run on THIS server, not in the app, so a cracked
+  client is useless without a valid key that the server approves.
+- HWID lock: a key binds to the first machine that activates it; other
+  machines are rejected, and sending events / running auctions also
+  requires the matching device. A shared key can't drive a second PC.
+- The admin panel is HTTPS and password-gated; SQL is parameterized
+  (safe from injection); no secrets are stored in the app.
+- Keep ADMIN_PASSWORD strong and private.
+- No software is 100% uncrackable - this gives strong, real-world
+  protection that stops casual piracy and key-sharing, which is what
+  actually matters.
+===================================================================

@@ -6,7 +6,13 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python server.py
     envVars:
-      - key: LICENSE_KEYS
+      - key: ADMIN_PASSWORD      # REQUIRED - your admin panel password
         sync: false
-      - key: HWID_LOCK
-        value: "0"
+      - key: ADMIN_TOKEN         # optional - for SellAuth/Stripe auto-keys later
+        sync: false
+      - key: DATABASE_URL        # optional - Supabase Postgres URL for 24/7 persistence
+        sync: false
+      - key: LATEST_VERSION      # e.g. 3.0  (what the app's updater reports)
+        sync: false
+      - key: DOWNLOAD_URL        # link to the newest installer
+        sync: false
